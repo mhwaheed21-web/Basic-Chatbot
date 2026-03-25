@@ -1,45 +1,4 @@
-#database_backend.py
-#
-# from langgraph.graph import StateGraph, START, END
-# from typing import TypedDict, Annotated
-# from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-# from langchain_groq import ChatGroq
-# from langgraph.checkpoint.sqlite import SqliteSaver
-# from langgraph.graph.message import add_messages
-# from dotenv import load_dotenv
-# import sqlite3
 
-# load_dotenv()
-
-# model = ChatGroq(model="llama-3.3-70b-versatile")
-
-# class ChatState(TypedDict):
-#     messages: Annotated[list[BaseMessage], add_messages]
-
-# def chat_node(state: ChatState):
-#     messages = state['messages']
-#     response = model.invoke(messages)
-#     return {"messages": [response]}
-
-# conn=sqlite3.connect(database='chatbot.db', check_same_thread=False)
-# # Checkpointer
-# checkpointer = SqliteSaver(conn=conn)
-
-# graph = StateGraph(ChatState)
-# graph.add_node("chat_node", chat_node)
-# graph.add_edge(START, "chat_node")
-# graph.add_edge("chat_node", END)
-
-# chatbot = graph.compile(checkpointer=checkpointer)
-
-# def retrive_all_threads():
-#     all_threads=set()
-#     for checkpoint in checkpointer.list(None):
-#         all_threads.add(checkpoint.config['configurable']['thread_id'])
-#     return list(all_threads)
-
-
-# tools_backend.py
 
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, Annotated
@@ -56,15 +15,10 @@ import requests
 
 load_dotenv()
 
-# -------------------
-# 1. LLM
-# -------------------
-llm = ChatGroq(model="llama-3.3-70b-versatile",temperature=0)
 
-# -------------------
-# 2. Tools
-# -------------------
-# Tools
+llm = # (specify your model and here)
+
+
 search_tool = DuckDuckGoSearchResults(num_results=3)
 
 @tool
@@ -108,33 +62,10 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
 tools = [search_tool, calculator]
 llm_with_tools = llm.bind_tools(tools,tool_choice="auto")
 
-# -------------------
-# 3. State
-# -------------------
+
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
-# -------------------
-# 4. Nodes
-# -------------------
-
-
-# def chat_node(state: ChatState):
-#     """LLM node that may answer or request a tool call."""
-#     messages = state["messages"]
-#     response = llm_with_tools.invoke(messages)
-#     return {"messages": [response]}
-
-# def chat_node(state: ChatState):
-#     messages = state["messages"]
-
-#     system_prompt = SystemMessage(
-#         content="You are a helpful assistant. Use tools when needed."
-#     )
-
-#     response = llm_with_tools.invoke([system_prompt] + messages)
-
-#     return {"messages": [response]}
 
 def chat_node(state: ChatState):
     messages = state["messages"]
@@ -154,7 +85,7 @@ Rules:
     try:
         response = llm_with_tools.invoke([system_prompt] + messages)
     except Exception:
-        # fallback: call the model WITHOUT tools
+        
         response = llm.invoke([system_prompt] + messages)
 
     return {"messages": [response]}
@@ -163,15 +94,10 @@ Rules:
 tool_node = ToolNode(tools)
 
 
-# -------------------
-# 5. Checkpointer
-# -------------------
 conn = sqlite3.connect(database="chatbot.db", check_same_thread=False)
 checkpointer = SqliteSaver(conn=conn)
 
-# -------------------
-# 6. Graph
-# -------------------
+
 graph = StateGraph(ChatState)
 graph.add_node("chat_node", chat_node)
 graph.add_node("tools", tool_node)
@@ -183,9 +109,7 @@ graph.add_edge('tools', 'chat_node')
 
 chatbot = graph.compile(checkpointer=checkpointer)
 
-# -------------------
-# 7. Helper
-# -------------------
+
 def retrive_all_threads():
     all_threads = set()
     for checkpoint in checkpointer.list(None):
